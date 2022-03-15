@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from asyncio.windows_events import INFINITE
 import random
 import numpy as np
 import tensorflow as tf
@@ -10,17 +11,17 @@ from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import game_env
 
-EPISODES = 2000
+EPISODES = 500
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=2000)
+        self.memory = deque(maxlen=1000)
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
+        self.epsilon_min = 0.05
+        self.epsilon_decay = 0.997
         self.learning_rate = 0.001
         self.model = self._build_model()
 
@@ -37,10 +38,12 @@ class DQNAgent:
     def memorize(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
-    def act(self, state):
-        if np.random.rand() <= self.epsilon:
+    def act(self, state, invalid_action,apporach=1):
+        if apporach ==1 and np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
         act_values = self.model.predict(state)
+        for ia in invalid_action:
+            act_values[0][ia] = -INFINITE
         return np.argmax(act_values[0])  # returns action
 
     def replay(self, batch_size):
@@ -66,7 +69,13 @@ class DQNAgent:
     def save(self, name):
         self.model.save_weights(name)
     
-    
+    def random_act(self,invalid_action):
+        temp = np.array(range(0,self.action_size,1))
+        for ia in invalid_action:
+            temp.remove(ia)
+        action = random.choice(temp)
+        return action
+
     # @tf.function
     # def update_gradient(self, target_q, n_step_target_q, states, actions, batch_weights=1):
 
@@ -104,13 +113,13 @@ class DQNAgent:
 
     #     return main_q, loss
 
-def eval(agent,episode = 50):
+def eval(agent,episode = 1):
     win = 0
     for i in range(episode):
         State = game_env.reset()
         for step in range(500):
             state = State.board
-            action = agent.act(state)
+            action = agent.act(state,State.get_invalid_action(),0)
             next_state, reward, done = State.step(action)
             if done:
                 if reward>0:
@@ -128,36 +137,52 @@ if __name__ == "__main__":
     done = False
     batch_size = 16
     win_his = []
+    win_p = 0 
+    win_ph = []
     print("init success")
     for e in range(EPISODES):
         State = game_env.reset()
         for time in range(500):
             # env.render()
             state = State.board
-            action = agent.act(state)
+            action = agent.act(state,State.get_invalid_action())
+            # This is a random action 
+            # action = agent.random_act(State,State.get_invalid_action())
             next_state, reward, done = State.step(action)
             # next_state = np.reshape(next_state, [1, state_size])
             agent.memorize(state, action, reward, next_state, done)
             # state = next_state
             # print("time:",time,"reward:",reward)
             if done:
-                print("episode: {}/{}, score: {}, e: {:.4}"
-                      .format(e, EPISODES, reward, agent.epsilon))
+                if reward>0:
+                    win_p+=1
+                print("episode: {}/{}, score: {},win_p: {} e: {:.4}"
+                      .format(e, EPISODES, reward,win_p/(e+1), agent.epsilon))
+                win_ph.append(win_p/(e+1))
                 break
             if len(agent.memory) > batch_size and time % 5 == 0:
                 agent.replay(batch_size)
+        
         # if e % 10 == 0:
         #     agent.save("./save/cartpole-dqn.h5")
         if(e % 50 == 0):
+            State = game_env.reset()
             percentage = eval(agent)
             win_his.append(percentage)
             print("_________eval_______win percentage:",percentage)
     
     agent.save("dqn.h5")
-    x = np.arange(0,EPISODES,2)
+    print('save success')
+    x = np.arange(0,EPISODES,50)
     plt.plot(x,win_his)
     plt.xticks(x)
     plt.xticks(x[::2])
     plt.ylabel('win_percentage')
     plt.xlabel('episode')
-    plt.savefig("save.png")
+    plt.savefig("save1.png")
+    plt.close()
+    print(win_ph)
+    plt.plot(win_ph)
+    plt.ylabel('win_percentage')
+    plt.xlabel('episode')
+    plt.savefig("save2.png")

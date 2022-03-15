@@ -139,13 +139,29 @@ class State(object):
         # if done: reward = living_reward(observation_,player)
         # else: reward=0
         reward = living_reward(observation_,player)
-        if done and reward == 0: reward = -100
+        if done:
+            if reward == 0: reward = -100
+            else: reward*=10
         return observation_,reward,done
     
     def reset():
     # state at the start of the game
         board = initial_board()
         return State(board).board
+    
+    def get_invalid_action(self):
+        action = []
+        board =self.board
+        for x in range(len(board[0])):
+                for y in range(len(board)):
+                    cell_state = board[x][y]
+                    if cell_state ==1 or cell_state == 2:
+                        temp=[]
+                        temp.append(x)
+                        temp.append(y)
+                        action.append(get_action_id(temp))
+        return action
+
 
 
 # conway = State(initial_board())

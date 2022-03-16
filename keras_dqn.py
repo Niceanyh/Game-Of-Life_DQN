@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from asyncio.windows_events import INFINITE
+import math
 import random
 import numpy as np
 import tensorflow as tf
@@ -11,7 +11,7 @@ from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import game_env
 
-EPISODES = 500
+EPISODES = 5000
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -20,9 +20,9 @@ class DQNAgent:
         self.memory = deque(maxlen=1000)
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
-        self.epsilon_min = 0.05
-        self.epsilon_decay = 0.997
-        self.learning_rate = 0.001
+        self.epsilon_min = 0.005
+        self.epsilon_decay = 0.999
+        self.learning_rate = 0.0001
         self.model = self._build_model()
 
     def _build_model(self):
@@ -43,7 +43,7 @@ class DQNAgent:
             return random.randrange(self.action_size)
         act_values = self.model.predict(state)
         for ia in invalid_action:
-            act_values[0][ia] = -INFINITE
+            act_values[0][ia] = - math.inf
         return np.argmax(act_values[0])  # returns action
 
     def replay(self, batch_size):
@@ -165,23 +165,23 @@ if __name__ == "__main__":
         
         # if e % 10 == 0:
         #     agent.save("./save/cartpole-dqn.h5")
-        if(e % 50 == 0):
-            State = game_env.reset()
-            percentage = eval(agent)
-            win_his.append(percentage)
-            print("_________eval_______win percentage:",percentage)
+        # if(e % 50 == 0):
+        #     State = game_env.reset()
+        #     percentage = eval(agent)
+        #     win_his.append(percentage)
+        #     print("_________eval_______win percentage:",percentage)
     
     agent.save("dqn.h5")
     print('save success')
-    x = np.arange(0,EPISODES,50)
-    plt.plot(x,win_his)
-    plt.xticks(x)
-    plt.xticks(x[::2])
-    plt.ylabel('win_percentage')
-    plt.xlabel('episode')
-    plt.savefig("save1.png")
-    plt.close()
-    print(win_ph)
+    # x = np.arange(0,EPISODES,50)
+    # plt.plot(x,win_his)
+    # plt.xticks(x)
+    # plt.xticks(x[::2])
+    # plt.ylabel('win_percentage')
+    # plt.xlabel('episode')
+    # plt.savefig("save1.png")
+    # plt.close()
+    # print(win_ph)
     plt.plot(win_ph)
     plt.ylabel('win_percentage')
     plt.xlabel('episode')

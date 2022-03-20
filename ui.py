@@ -44,7 +44,8 @@ sound = load_music()
 
 myfont = pygame.font.Font(None,20)
 game_end_font = pygame.font.Font(None,100)
-font_gen = pygame.font.Font(None,50)
+font_gen = pygame.font.Font(None,53)
+font_life = pygame.font.Font(None,25)
 WHITE = (200, 200, 200)
 BLACK = (0,0,0)
 blockSize = 70
@@ -65,9 +66,9 @@ ai_pre_event = pygame.USEREVENT + 2
 
 #set timer
 pygame.time.set_timer(evolve_event, 2000) #evolve every 3000ms
-if pygame.time.get_ticks() == 500:
-            pygame.time.set_timer(ai_pre_event, 2000)
-            print("set success")
+# if pygame.time.get_ticks() == 500:
+#             pygame.time.set_timer(ai_pre_event, 2000)
+#             print("set success")
 
 
 def drawGrid():
@@ -114,6 +115,7 @@ def check_game_over(grid):
 def main_game():
     kmeans = pickle.load(open("kmeans_sound.pkl", "rb"))
     run = True
+    pause = False
     game_over_p2win = False
     game_over_p1win = False
     draw_ai_action = False
@@ -122,15 +124,18 @@ def main_game():
     while run:
         screen.fill(bg)
         drawP(Board.board.T)
-        if draw_ai_action == True:
-            print("draw_ai_action")
-            x_ai_next,y_ai_next = game_env.get_action(
-                    agent.act(Board.board,Board.get_invalid_action()))
-            draw_ai_grid(x_ai_next,y_ai_next)
-        
+        # if draw_ai_action == True:
+        #     print("draw_ai_action")
+        #     x_ai_next,y_ai_next = game_env.get_action(
+        #             agent.act(Board.board,Board.get_invalid_action()))
+        #     draw_ai_grid(x_ai_next,y_ai_next)
         drawGrid()
-        GenerationText = font_gen.render("Generation %d "%Board.gen, True,(175, 215, 70),(0,0,120))
-        screen.blit(GenerationText, (10,0))
+        GenerationText = font_gen.render("Generation %d "%Board.gen, True,(35, 40, 35),bg)
+        screen.blit(GenerationText, (160,40))
+        lifetext_p1 = font_life.render("AI: %d"%game_env.living_reward(Board.board,1), True,(35, 40, 35),bg)
+        screen.blit(lifetext_p1, (500,30))
+        lifetext_p1 = font_life.render("Player: %d"%(game_env.living_reward(Board.board,2)), True,(35, 40, 35),bg)
+        screen.blit(lifetext_p1, (500,60))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -141,7 +146,7 @@ def main_game():
                 if event.key == pygame.K_SPACE:
                     pause = not pause
             
-            if event.type == evolve_event:
+            if event.type == evolve_event and not pause:
                 sound_index = int(kmeans.predict(Board.board.flatten().reshape(1,81)))
                 music = sound[sound_index]
                 # before_num = game_env.living_reward(Board,1)

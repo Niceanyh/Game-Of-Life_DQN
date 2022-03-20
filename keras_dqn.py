@@ -11,13 +11,13 @@ from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import game_env
 
-EPISODES = 5000
+EPISODES = 2000
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
         self.state_size = state_size
         self.action_size = action_size
-        self.memory = deque(maxlen=1000)
+        self.memory = deque(maxlen=2000)
         self.gamma = 0.95    # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.005
@@ -70,48 +70,11 @@ class DQNAgent:
         self.model.save_weights(name)
     
     def random_act(self,invalid_action):
-        temp = np.array(range(0,self.action_size,1))
+        temp = list(np.array(range(0,self.action_size,1)))
         for ia in invalid_action:
             temp.remove(ia)
         action = random.choice(temp)
         return action
-
-    # @tf.function
-    # def update_gradient(self, target_q, n_step_target_q, states, actions, batch_weights=1):
-
-    #     """
-    #     Update main q network by experience replay method.
-    #     Args:
-    #         target_q (tf.float32): Target Q value for barch.
-    #         n_step_target_q (tf.int32): Target Q value after n_step.
-    #         states (tf.float32): Batch of states.
-    #         actions (tf.int32): Batch of actions.
-    #         batch_weights(tf.float32): weights of this batch.
-    #     """
-
-    #     self.policy_network.update_lr()
-    #     with tf.GradientTape() as tape:
-    #         tape.watch(self.policy_network.model.trainable_weights)
-    #         main_q = tf.reduce_sum(
-    #             self.policy_network.model(states) * tf.one_hot(actions, self.n_actions, 1.0, 0.0),
-    #             axis=1)
-
-    #         losses = self.policy_network.loss_function(main_q, target_q) * self.policy_network.one_step_weight
-    #         losses += self.policy_network.loss_function(main_q, n_step_target_q) * self.policy_network.n_step_weight
-
-    #         if self.policy_network.l2_weight > 0:
-    #             losses += self.policy_network.l2_weight * tf.reduce_sum(
-    #                 [tf.reduce_sum(tf.square(layer_weights))
-    #                  for layer_weights in self.policy_network.model.trainable_weights])
-
-    #         loss = tf.reduce_mean(losses * batch_weights)
-
-    #     self.policy_network.optimizer.minimize(loss, self.policy_network.model.trainable_variables, tape=tape)
-
-    #     self.loss_metric.update_state(loss)
-    #     self.q_metric.update_state(main_q)
-
-    #     return main_q, loss
 
 def eval(agent,episode = 1):
     win = 0
@@ -126,7 +89,6 @@ def eval(agent,episode = 1):
                     win+=1
                 break
     return win/episode
-
 
 if __name__ == "__main__":
     game = game_env.new_state()
@@ -145,12 +107,15 @@ if __name__ == "__main__":
         for time in range(500):
             # env.render()
             state = State.board
-            action = agent.act(state,State.get_invalid_action())
+            action1 = agent.act(state,State.get_invalid_action())
             # This is a random action 
-            # action = agent.random_act(State,State.get_invalid_action())
-            next_state, reward, done = State.step(action)
+            action2 = agent.random_act(State.get_invalid_action())
+            
+            while action1==action2:
+                action2 = agent.random_act(State.get_invalid_action())
+            next_state, reward, done = State.step(action1,action2,singlePlayer=False)
             # next_state = np.reshape(next_state, [1, state_size])
-            agent.memorize(state, action, reward, next_state, done)
+            agent.memorize(state, action1, reward, next_state, done)
             # state = next_state
             # print("time:",time,"reward:",reward)
             if done:
@@ -163,8 +128,6 @@ if __name__ == "__main__":
             if len(agent.memory) > batch_size and time % 5 == 0:
                 agent.replay(batch_size)
         
-        # if e % 10 == 0:
-        #     agent.save("./save/cartpole-dqn.h5")
         # if(e % 50 == 0):
         #     State = game_env.reset()
         #     percentage = eval(agent)

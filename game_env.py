@@ -127,12 +127,15 @@ class State(object):
             return False
         else: return True
         
-    def step(self,action_id,player=1):
-        action = get_action(action_id)
+    def step(self,action_id_p1,action_id_p2= None,player=1,singlePlayer=True):
+        action1 = get_action(action_id_p1)
         #todo check if an action is valid
         # if(self.board[action[0]][action[1]]!=0):
-        self.board[action[0]][action[1]]=player
-        
+        self.board[action1[0]][action1[1]]=player
+        if(singlePlayer==False):
+            action2 = get_action(action_id_p2)
+            self.board[action2[0]][action2[1]]=2
+            
         observation_ = self.evolve() # conway game evolve to next gen
         self.board = observation_
         done = self.is_not_end()

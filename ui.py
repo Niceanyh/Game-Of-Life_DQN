@@ -1,20 +1,45 @@
 import pygame
 import game_env
 import numpy as np
-import pygamepopup
-from pygamepopup.menu_manager import MenuManager
-from pygamepopup.components import Button, InfoBox
 from tkinter import *
-from tkinter import messagebox
+import random
 from keras_dqn import DQNAgent
+import pickle
 pygame.init()
-pygamepopup.init()
 
+def load_music():
+    sound = []
+    sound.append(pygame.mixer.Sound("sound/A/A1.mp3"))
+    sound.append(pygame.mixer.Sound("sound/A/A2.mp3"))
+    sound.append(pygame.mixer.Sound("sound/A/A3.mp3"))
+    sound.append(pygame.mixer.Sound("sound/A/A4.mp3"))
+    sound.append(pygame.mixer.Sound("sound/A/A5.mp3"))
+    sound.append(pygame.mixer.Sound("sound/A/A6.mp3"))
+    sound.append(pygame.mixer.Sound("sound/A/A7.mp3"))
+    
+    sound.append(pygame.mixer.Sound("sound/G/G1.mp3"))
+    sound.append(pygame.mixer.Sound("sound/G/G2.mp3"))
+    sound.append(pygame.mixer.Sound("sound/G/G3.mp3"))
+    sound.append(pygame.mixer.Sound("sound/G/G4.mp3"))
+    sound.append(pygame.mixer.Sound("sound/G/G5.mp3"))
+    sound.append(pygame.mixer.Sound("sound/G/G6.mp3"))
+    sound.append(pygame.mixer.Sound("sound/G/G7.mp3"))
+
+    sound.append(pygame.mixer.Sound("sound/D/D1.mp3"))
+    sound.append(pygame.mixer.Sound("sound/D/D2.mp3"))
+    sound.append(pygame.mixer.Sound("sound/D/D3.mp3"))
+    sound.append(pygame.mixer.Sound("sound/D/D4.mp3"))
+    sound.append(pygame.mixer.Sound("sound/D/D5.mp3"))
+    sound.append(pygame.mixer.Sound("sound/D/D6.mp3"))
+    sound.append(pygame.mixer.Sound("sound/D/D7.mp3"))
+    return sound
 game = game_env.new_state()
 state_size = game.n_features
 action_size = game.n_actions
 agent = DQNAgent(state_size, action_size)
-agent.load("dqn.h5")
+agent.load("DQN_model/5000+10002p_wr0854.h5")
+agent.epsilon = 0 #no exploitation
+sound = load_music()
 
 
 myfont = pygame.font.Font(None,20)
@@ -26,19 +51,23 @@ blockSize = 70
 menu = 100
 WINDOW_WIDTH = 630
 WINDOW_HEIGHT = WINDOW_WIDTH+menu
-p1_color = (94,50,148)
-p1ai_prepare_color = (90,44,130)
-p2_color = (50,168,78)
+bg = (253,252,223)
+p1_color = (225,120,108)
+p1_prepare_color = (248,218,187)
+p2_prepare_color = (76,172,183)
+p2_color = (53,128,163)
 screen = pygame.display.set_mode([WINDOW_WIDTH,WINDOW_HEIGHT])
-menu_manager = MenuManager(screen)
 
 
 evolve_event = pygame.USEREVENT + 1
 ai_pre_event = pygame.USEREVENT + 2
 
+
 #set timer
-pygame.time.set_timer(evolve_event, 1000) #evolve every 3000ms
-pygame.time.set_timer(ai_pre_event, 1400)
+pygame.time.set_timer(evolve_event, 2000) #evolve every 3000ms
+if pygame.time.get_ticks() == 500:
+            pygame.time.set_timer(ai_pre_event, 2000)
+            print("set success")
 
 
 def drawGrid():
@@ -51,7 +80,7 @@ def drawGrid():
 def draw_ai_grid(x_ai_next,y_ai_next):
     x_ai_next = x_ai_next * blockSize
     y_ai_next = menu + y_ai_next * blockSize
-    pygame.draw.rect(screen, p1ai_prepare_color, [x_ai_next, y_ai_next, blockSize, blockSize])
+    pygame.draw.rect(screen, p1_prepare_color, [x_ai_next, y_ai_next, blockSize, blockSize])
     
 def drawP(grid):
     grid == np.flipud(grid)
@@ -81,42 +110,56 @@ def check_game_over(grid):
     else: return 0
 
 
+
 def main_game():
+    kmeans = pickle.load(open("kmeans_sound.pkl", "rb"))
     run = True
     game_over_p2win = False
     game_over_p1win = False
     draw_ai_action = False
     Board = game_env.reset()
+    
     while run:
-        screen.fill(WHITE)
-        drawGrid()
-        # if draw_ai_action == True:
-        #     draw_ai_grid(x_ai_next,y_ai_next)
+        screen.fill(bg)
         drawP(Board.board.T)
+        if draw_ai_action == True:
+            print("draw_ai_action")
+            x_ai_next,y_ai_next = game_env.get_action(
+                    agent.act(Board.board,Board.get_invalid_action()))
+            draw_ai_grid(x_ai_next,y_ai_next)
+        
+        drawGrid()
         GenerationText = font_gen.render("Generation %d "%Board.gen, True,(175, 215, 70),(0,0,120))
         screen.blit(GenerationText, (10,0))
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
+                return 0
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_ESCAPE:
                     run = False
-                # if event.key == pygame.K_SPACE:
-                #     pause = not pause
+                if event.key == pygame.K_SPACE:
+                    pause = not pause
             
             if event.type == evolve_event:
-                id= agent.act(Board.board)
+                sound_index = int(kmeans.predict(Board.board.flatten().reshape(1,81)))
+                music = sound[sound_index]
+                # before_num = game_env.living_reward(Board,1)
+                # music1 = random.choice(list(sound))
+                pygame.mixer.Sound.play(music)
+                pygame.mixer.music.stop()
+                id= agent.act(Board.board,Board.get_invalid_action())
                 x,y = game_env.get_action(id)
-                Board.step(id)
+                observation_,reward,done = Board.step(id)
+                # after_num = game_env.living_reward(Board,1)
                 Board.gen+=1
                 draw_ai_action = False
-                print(x,y)
-                print(Board.gen)
+                # print(x,y)
+                # print(Board.gen)
                 # print(Board.board)
-                # Board.step(id)
             if event.type == ai_pre_event:
                 draw_ai_action = True
-                x_ai_next,y_ai_next = game_env.get_action(agent.act(Board.board))
+                
                 
         if pygame.mouse.get_pressed()[0]:
             mouseX, mouseY = pygame.mouse.get_pos()
@@ -143,24 +186,10 @@ def main_game():
         # pygame.draw.circle(screen, (0, 0, 255), (250, 250), 75)
         # pygame.display.flip()
     if game_over_p1win:
-        screen.fill(WHITE)
-        GenerationText = game_end_font.render("p1_win", True,(175, 215, 70),(0,0,120))
-        screen.blit(GenerationText, (100,200))
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_over_p1win = False
-        pygame.display.update()
+        return 1
         
     if game_over_p2win:
-        screen.fill(WHITE)
-        GenerationText = game_end_font.render("p2_win", True,(175, 215, 70),(0,0,120))
-        screen.blit(GenerationText, (100,200))
-        
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                game_over_p2win = False
-        pygame.display.update()
+        return 2
     
     # pygame.quit()
 

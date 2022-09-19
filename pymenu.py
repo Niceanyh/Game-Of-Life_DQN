@@ -10,6 +10,9 @@ pygame.init()
 surface1 = pygame.display.set_mode((630, 730))
 music = random.choice(list(sound))
 pygame.mixer.Sound.play(music)
+
+
+
 def changeTomenu():
     menu.mainloop(surface1)
 def start_the_game_withAI():
